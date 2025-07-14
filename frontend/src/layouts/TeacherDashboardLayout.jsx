@@ -2,7 +2,7 @@ import {Link, Outlet, useNavigate} from "react-router-dom";
 import Logo from "../components/Logo.jsx";
 import {LOGIN_ROUTE, STUDENT_DASHBOARD_ROUTE} from "../router/index.jsx";
 import {useEffect, useState,} from "react";
-import {useUserContext} from "../context/StudentContext.jsx";
+import { useAuth } from '../context/AuthContext.jsx';
 import UserApi from "../services/Api/UserApi.js";
 import {GaugeIcon} from "lucide-react";
 import {ModeToggle} from "../components/mode-toggle.jsx";
@@ -12,7 +12,7 @@ import TeacherDropDownMenu from "./drop-down-menu/TeacherDropDownMenu.jsx";
 export default function TeacherDashboardLayout() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
-  const {authenticated, setUser, setAuthenticated, logout: contextLogout} = useUserContext()
+  const {authenticated, setUser, setAuthenticated, logout: contextLogout} = useAuth()
   useEffect(() => {
     if (authenticated === true) {
       setIsLoading(false)

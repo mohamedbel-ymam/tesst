@@ -1,7 +1,7 @@
-import {useUserContext} from "../../context/StudentContext.jsx";
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function TeacherDashboard() {
-  const {user} = useUserContext()
+  const {user} = useAuth()
   return <>
     <div className="relative overflow-x-auto">
       <h1>Hi Teacher</h1>

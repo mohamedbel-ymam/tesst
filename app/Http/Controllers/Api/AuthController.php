@@ -7,30 +7,36 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-  public function login(Request $req)
-  {
-    $creds = $req->validate([
-      'email'    => 'required|email',
-      'password' => 'required',
-    ]);
+    // POST /api/login
+    public function login(Request $req)
+    {
+        $req->validate([
+            'email'    => 'required|email',
+            'password' => 'required',
+        ]);
 
-    if (! Auth::attempt($creds)) {
-      return response()->json(['message'=>'Invalid credentials'], 401);
+        if (! Auth::attempt($req->only('email','password'))) {
+            return response()->json(['message'=>'Invalid credentials'], 401);
+        }
+
+        // session-cookie is now set automatically
+        return response()->json([
+            'user' => $req->user(),
+        ], 200);
     }
 
-    $user  = Auth::user();
-    $token = $user->createToken('api-token')->plainTextToken;
+    // GET /api/me
+    public function me(Request $req)
+    {
+        // this will 401 if not authenticated,
+        // or return the user object otherwise
+        return response()->json($req->user(), 200);
+    }
 
-    return response()->json([
-      'user'  => $user,
-      'token' => $token,
-    ], 200);
-  }
-
-  public function logout(Request $req)
-  {
-    // delete only the current bearer token
-    $req->user()->currentAccessToken()->delete();
-    return response()->json(['message'=>'Logged out'], 200);
-  }
+    // POST /api/logout
+    public function logout(Request $req)
+    {
+        Auth::logout();
+        return response()->json(['message'=>'Logged out'], 200);
+    }
 }

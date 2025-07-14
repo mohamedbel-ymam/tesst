@@ -11,13 +11,13 @@ import {
 } from "../../components/ui/dropdown-menu.js"
 import { Button } from "../../components/ui/button.jsx"
 import { User, LogOut } from "lucide-react"
-import { useUserContext } from "../../context/StudentContext.jsx"
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useNavigate } from "react-router-dom"
 import { LOGIN_ROUTE } from "../../router/index.jsx"
 
 export default function DefaultDropDownMenu({ children }) {
   const navigate = useNavigate()
-  const { user, logout } = useUserContext()
+  const { user, logout } = useAuth()
 
   const handleLogout = async () => {
     try {

@@ -1,11 +1,11 @@
-import {useUserContext} from "../context/StudentContext.jsx";
+import { useAuth } from '../context/AuthContext.jsx';
 import StudentDashboardLayout from "./StudentDashboardLayout.jsx";
 import AdminDashboardLayout from "./AdminDashboardLayout.jsx";
 import ParentDashboardLayout from "./ParentDashboardLayout.jsx";
 import TeacherDashboardLayout from "./TeacherDashboardLayout.jsx";
 
 export default function AdaptiveDashboardLayout({children}) {
-  const {user} = useUserContext();
+  const {user} = useAuth();
 
   if (user.role === 'admin') return <AdminDashboardLayout>{children}</AdminDashboardLayout>
   if (user.role === 'teacher') return <TeacherDashboardLayout>{children}</TeacherDashboardLayout>

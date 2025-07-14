@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserContext } from "../../context/StudentContext.jsx";
+import { useAuth } from '../../context/AuthContext.jsx';
 import { SELECT_DEGREE_ROUTE } from "../../router/index.jsx";
 
 const degrees = [
@@ -15,7 +15,7 @@ const degrees = [
 
 export default function DegreeSelector() {
   const navigate = useNavigate();
-  const { setSelectedDegree } = useUserContext();
+  const { setSelectedDegree } = useAuth();
 
   const handleSelect = (degree) => {
     setSelectedDegree(degree.value); // update context + localStorage

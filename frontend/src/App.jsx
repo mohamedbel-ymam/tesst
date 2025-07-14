@@ -1,21 +1,17 @@
-import './App.css'
-import {RouterProvider} from "react-router-dom";
-import {router} from "./router/index.jsx";
-import { StudentProvider } from "./context/StudentContext.jsx";
-import {ThemeProvider} from "./components/themeProvider.jsx";
-import {Toaster} from "./components/ui/sonner.jsx";
+import React from 'react';
+import { AuthProvider } from './context/AuthContext.jsx';
+import { RouterProvider } from 'react-router-dom';
+import {router} from './router/index.jsx';
+import { ThemeProvider } from './components/themeProvider';
+import { Toaster } from './components/ui/sonner';
 
-function App() {
+export default function App() {
   return (
-    <>
-      <StudentProvider>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <RouterProvider router={router}/>
-        </ThemeProvider>
-      </StudentProvider>
-      <Toaster/>
-    </>
-  )
+    <AuthProvider>                                 {/* 2️⃣ only here */}
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <RouterProvider router={router} />
+        <Toaster />
+      </ThemeProvider>
+    </AuthProvider>
+  );
 }
-
-export default App

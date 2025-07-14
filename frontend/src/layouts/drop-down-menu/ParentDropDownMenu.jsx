@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 import UserApi from "../../services/Api/UserApi.js";
 import {LOGIN_ROUTE} from "../../router/index.jsx";
-import {useUserContext} from "../../context/StudentContext.jsx";
+import { useAuth } from '../../context/AuthContext.jsx';
 import {useNavigate} from "react-router-dom";
 import DefaultDropDownMenu from "./DefaultDropDownMenu.jsx";
 

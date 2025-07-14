@@ -2,12 +2,12 @@ import {Link, Outlet, useNavigate} from "react-router-dom";
 import Logo from "../components/Logo.jsx";
 import {LOGIN_ROUTE, STUDENT_DASHBOARD_ROUTE} from "../router/index.jsx";
 import {useEffect} from "react";
-import {useUserContext} from "../context/StudentContext.jsx";
+import { useAuth } from '../context/AuthContext.jsx';
 import {HomeIcon, LogInIcon} from 'lucide-react'
 
 export default function GuestLayout() {
   const navigate = useNavigate()
-  const context = useUserContext()
+  const context = useAuth()
 
   useEffect(() => {
     if (context.authenticated) {

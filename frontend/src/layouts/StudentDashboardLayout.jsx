@@ -1,7 +1,7 @@
 // src/layouts/StudentDashboardLayout.jsx
 import { Link, Outlet, useNavigate } from "react-router-dom"
 import { useEffect } from "react"
-import { useUserContext } from "../context/StudentContext.jsx"
+import { useAuth } from '../context/AuthContext.jsx';
 import {
   LOGIN_ROUTE,
   STUDENT_DASHBOARD_ROUTE,
@@ -15,7 +15,7 @@ import { GaugeIcon } from "lucide-react"
 
 export default function StudentDashboardLayout() {
   const navigate = useNavigate()
-  const { user, authenticated, logout } = useUserContext()
+  const { user, authenticated, logout } = useAuth()
 
   // redirect to login if not authenticated
   useEffect(() => {

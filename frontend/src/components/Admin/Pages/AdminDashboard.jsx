@@ -1,7 +1,7 @@
-import {useUserContext} from "../../../context/StudentContext.jsx";
+import { useAuth } from '../../../context/AuthContext.jsx';
 
 export default function AdminDashboard() {
-  const {user} = useUserContext()
+  const {user} = useAuth()
   return <>
   <h1>Hi admin</h1>
     <div className="relative overflow-x-auto">

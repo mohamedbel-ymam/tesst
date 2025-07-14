@@ -7,13 +7,13 @@ import {
 } from "../../ui/carousel";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
-import { useUserContext } from "../../../context/StudentContext";
+import { useAuth } from '../../../context/AuthContext.jsx';
 import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay"; // optional autoplay
 import { Button } from "../../ui/button";
 
 export default function ForthDegreeDashboard() {
-  const { user, setSelectedDegree } = useUserContext();
+  const { user, setSelectedDegree } = useAuth();
   const navigate = useNavigate();
 
   const dashboardCards = [

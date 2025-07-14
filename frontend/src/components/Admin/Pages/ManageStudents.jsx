@@ -1,4 +1,4 @@
-import {useUserContext} from "../../../context/StudentContext.jsx";
+import { useAuth } from '../../../context/AuthContext.jsx';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "../../ui/tabs.jsx";
 import {Separator} from "../../ui/separator.jsx";
 import {ScrollArea, ScrollBar} from "../../ui/scroll-area.jsx";
@@ -8,7 +8,7 @@ import StudentUpsertForm from "../Forms/StudentUpsertForm.jsx";
 import studentApi from "../../../services/Api/Admin/StudentApi.js";
 
 export default function ManageStudents() {
-  const {user} = useUserContext()
+  const {user} = useAuth()
   return <>
     <div className="relative overflow-x-auto">
       <div className="hidden md:block">

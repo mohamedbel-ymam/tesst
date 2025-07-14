@@ -2,12 +2,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "../../components/ui/button.jsx";
 import { ScrollArea } from "../../components/ui/scroll-area.jsx";
 import { Link, useNavigate } from "react-router-dom";
-import { useUserContext } from "../../context/StudentContext.jsx";
+import { useAuth } from '../../context/AuthContext.jsx';
 import UserApi from "../../services/Api/UserApi.js";
 
 export function StudentAdministrationSideBar({ className }) {
   const navigate = useNavigate();
-  const { logout: contextLogout } = useUserContext();
+  const { logout: contextLogout } = useAuth();
 
   const handleLogout = async () => {
     try {

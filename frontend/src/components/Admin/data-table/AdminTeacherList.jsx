@@ -1,138 +1,47 @@
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { Trash2Icon } from "lucide-react";
-import { DataTable } from "./DataTable.jsx";
-import { DataTableColumnHeader } from "./DataTableColumnsHeader.jsx";
-import TeacherApi from "../../../services/Api/Admin/TeacherApi.js";
-import TeacherUpsertForm from "../Forms/TeacherUpsertForm.jsx";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction
-} from "../../ui/alert-dialog.jsx";
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription
-} from "../../ui/sheet.jsx";
-import { Button } from "../../ui/button.js";
+import React, { useState, useEffect } from 'react';
+import {DataTable} from '../data-table/DataTable';      // adjust path as needed
+import TeacherApi from '../../../services/Api/Admin/TeacherApi'; // adjust path as needed
+import { teacherColumns } from '../../../config/columns';    // <-- use teacherColumns
 
-export default function AdminTeacherList({ data = [], refreshList }) {
-  const [localData, setLocalData] = useState([]);
-  const usingProps = typeof refreshList === 'function';
-  const tableData = usingProps ? data : localData;
-
-  const fetchData = async () => {
-    try {
-      const resp = await TeacherApi.all();
-      const list = Array.isArray(resp.data)
-        ? resp.data
-        : Array.isArray(resp.data.data)
-        ? resp.data.data
-        : [];
-      setLocalData(list);
-    } catch (e) {
-      console.error("Failed to load teachers:", e);
-    }
-  };
+export default function AdminTeacherList() {
+  const [data, setData] = useState([]);       // initialize as empty array
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!usingProps) fetchData();
+    setLoading(true);
+    TeacherApi.all()
+      .then(response => {
+        setData(response.data.data);          // adjust if your payload shape differs
+      })
+      .catch(err => {
+        console.error(err);
+        setError(err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
-  const handleRefresh = async () => {
-    if (usingProps) await refreshList();
-    else await fetchData();
-  };
+  if (loading) {
+    return <div className="p-4 text-center">🔄 Loading teachers…</div>;
+  }
 
-  const columns = [
-    {
-      accessorKey: 'id',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="#ID" />
-    },
-    {
-      accessorKey: 'firstname',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="First Name" />
-    },
-    {
-      accessorKey: 'lastname',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Last Name" />
-    },
-    {
-      accessorKey: 'subject.name',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Subject" />
-    },
-    {
-      accessorKey: 'email',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />
-    },
-    {
-      id: 'actions',
-      cell: ({ row }) => {
-        const teacher = row.original;
-        const [open, setOpen] = useState(false);
+  if (error) {
+    return (
+      <div className="p-4 text-red-600">
+        ❌ Error loading teachers: {error.message}
+      </div>
+    );
+  }
 
-        const onUpdate = async (vals) => {
-          const res = await TeacherApi.update(teacher.id, vals);
-          await handleRefresh();
-          setOpen(false);
-          return res;
-        };
+  if (!data.length) {
+    return <div className="p-4 text-gray-500">No teachers found.</div>;
+  }
 
-        const onDelete = async () => {
-          const id = toast.loading('Deleting...');
-          await TeacherApi.delete(teacher.id);
-          toast.dismiss(id);
-          toast.success('Teacher deleted', { icon: <Trash2Icon /> });
-          await handleRefresh();
-        };
-
-        return (
-          <div className="flex gap-2">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button size="sm" variant="outline">Update</Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Update {teacher.firstname} {teacher.lastname}</SheetTitle>
-                  <SheetDescription>Modify and save.</SheetDescription>
-                </SheetHeader>
-                <div className="p-4">
-                  <TeacherUpsertForm values={teacher} handleSubmit={onUpdate} />
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive">Delete</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {teacher.firstname}?</AlertDialogTitle>
-                  <AlertDialogDescription>Cannot undo.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        );
-      }
-    }
-  ];
-
-  return <DataTable columns={columns} data={tableData} />;
+  return (
+    <div className="p-4">
+      <DataTable columns={teacherColumns} data={data} />
+    </div>
+  );
 }

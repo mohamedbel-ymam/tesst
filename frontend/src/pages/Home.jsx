@@ -1,8 +1,8 @@
 import React from 'react'
-import { useUserContext } from '../context/StudentContext'
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
-  const { user } = useUserContext()
+  const { user } = useAuth()
 
   return (
     <div>
