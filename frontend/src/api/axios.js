@@ -8,8 +8,12 @@ axios.defaults.headers.common.Accept = 'application/json';
 
 export const axiosClient = axios.create({
   baseURL: `${BASE}/api`,
+    withCredentials: true,            // ensure cookies are sent on API calls
+  headers: {
+    Accept: 'application/json',     // tell Laravel to return JSON 401s
+  },
 
- 
+  
 });
 
 axiosClient.interceptors.request.use(cfg => {

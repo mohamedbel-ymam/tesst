@@ -15,10 +15,20 @@ return [
     |
     */
 
-    'paths'            => ['api/*', 'sanctum/csrf-cookie'],
-    'allowed_origins'  => ['http://localhost:3000'],
-    'allowed_methods'  => ['*'],
-    'allowed_headers'  => ['*'],
-    'supports_credentials' => true,
+'paths' => [
+    'api/*',
+    'sanctum/csrf-cookie',
+    'login',
+    'logout',
+    'register',
+    'forgot-password',
+    'reset-password',
+    'email/verification-notification',
+    'verify-email/*',
+],
+'allowed_methods'   => ['*'],
+'allowed_origins'   => ['http://localhost:3000'],
+'allowed_headers'   => ['*'],
+'supports_credentials' => true,
 
 ];
