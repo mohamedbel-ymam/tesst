@@ -11,51 +11,75 @@ import { RadioGroup, RadioGroupItem } from "../../ui/radio-group.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { Textarea } from "../../ui/textarea.js";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
-// 🧠 You may want to fetch this from the backend
 const BLOOD_TYPES = ['O-', 'O+', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
 const formSchema = z.object({
-  firstname: z.string().max(50),
-  lastname: z.string().max(50),
-  date_of_birth: z.string(),
-  gender: z.enum(["m", "f"]),
+  firstname: z.string().min(2, "First name required").max(50),
+  lastname: z.string().min(2, "Last name required").max(50),
+  date_of_birth: z.string().optional(),
+  gender: z.enum(["m", "f"]).default("m"),
   blood_type: z.string(),
-  address: z.string().max(255),
-  phone: z.string().max(10),
-  email: z.string().email().min(2).max(30),
-  password: z.string().min(8).max(30)
+  address: z.string().min(3, "Address is required"),
+  phone: z.string().min(3, "Phone is required"),
+  email: z.string().email().min(2).max(50),
+  password: z.string().min(8).max(30).optional(), // only required when creating
 });
 
-export default function ParentUpsertForm({ handleSubmit, values }) {
-  const isUpdate = Boolean(values);
+export default function ParentUpsertForm({ handleSubmit, values, onCancel }) {
+  const isUpdate = Boolean(values && values.id);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-  firstname: values?.firstname ?? "",
-  lastname: values?.lastname ?? "",
-  date_of_birth: values?.date_of_birth ?? "",
-  gender: values?.gender ?? "m",
-  blood_type: values?.blood_type ?? BLOOD_TYPES[0],
-  address: values?.address ?? "",
-  phone: values?.phone ?? "",
-  email: values?.email ?? "",
-  password: ""
-}
+      firstname: values?.firstname || "",
+      lastname: values?.lastname || "",
+      date_of_birth: values?.date_of_birth || "",
+      gender: values?.gender || "m",
+      blood_type: values?.blood_type || BLOOD_TYPES[0],
+      address: values?.address || "",
+      phone: values?.phone || "",
+      email: values?.email || "",
+      password: "",
+      id: values?.id || undefined,
+    },
   });
 
-  const { setError, formState: { isSubmitting }, reset } = form;
+  useEffect(() => {
+    form.reset({
+      firstname: values?.firstname || "",
+      lastname: values?.lastname || "",
+      date_of_birth: values?.date_of_birth || "",
+      gender: values?.gender || "m",
+      blood_type: values?.blood_type || BLOOD_TYPES[0],
+      address: values?.address || "",
+      phone: values?.phone || "",
+      email: values?.email || "",
+      password: "",
+      id: values?.id || undefined,
+    });
+  }, [values]);
+
+  const { setError, formState: { isSubmitting } } = form;
 
   const onSubmit = async (formData) => {
-    const loaderMsg = isUpdate ? "Updating parent..." : "Creating parent...";
-    const toastId = toast.loading(loaderMsg);
-
+    const loader = toast.loading(isUpdate ? "Updating parent..." : "Creating parent...");
     try {
+      // Always set role to "parent" (if your API does not do it server-side)
+      formData.role = "parent";
+      // Remove password field if empty on update
+      if (isUpdate && !formData.password) {
+        delete formData.password;
+      }
+      if (isUpdate) {
+        formData.id = values.id;
+      }
       const { status, data } = await handleSubmit(formData);
-      if (status === 200) {
-        toast.success(data.message);
-        if (!isUpdate) reset(); // reset only if adding
+      if (status === 200 || status === 201) {
+        toast.success(data.message || "Saved!");
+        form.reset();
+        if (onCancel) onCancel();
       }
     } catch (error) {
       const responseErrors = error?.response?.data?.errors;
@@ -64,17 +88,16 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
           setError(field, { message: messages.join(", ") });
         });
       } else {
-        toast.error("Something went wrong.");
+        toast.error("Unexpected error occurred.");
       }
     } finally {
-      toast.dismiss(toastId);
+      toast.dismiss(loader);
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-
         <FormField
           control={form.control}
           name="firstname"
@@ -86,7 +109,6 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="lastname"
@@ -98,7 +120,6 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="date_of_birth"
@@ -110,7 +131,6 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="gender"
@@ -118,7 +138,7 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             <FormItem>
               <FormLabel>Gender</FormLabel>
               <FormControl>
-                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
                   <RadioGroupItem value="m" /> Male
                   <RadioGroupItem value="f" /> Female
                 </RadioGroup>
@@ -127,14 +147,13 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="blood_type"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Blood Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger><SelectValue placeholder="Choose" /></SelectTrigger>
                 </FormControl>
@@ -148,7 +167,6 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="address"
@@ -160,7 +178,6 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="phone"
@@ -172,7 +189,6 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="email"
@@ -184,24 +200,43 @@ export default function ParentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl><Input type="password" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
+        {!isUpdate && (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl><Input type="password" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        {isUpdate && (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New Password (optional)</FormLabel>
+                <FormControl><Input type="password" {...field} placeholder="Leave blank to keep current password" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <div className="flex gap-2">
+          <Button type="submit" className="mt-2" disabled={isSubmitting}>
+            {isSubmitting && <Loader className="mr-2 animate-spin" />}
+            {isUpdate ? "Update" : "Create"}
+          </Button>
+          {isUpdate && onCancel && (
+            <Button type="button" variant="outline" className="mt-2" onClick={onCancel}>
+              Cancel
+            </Button>
           )}
-        />
-
-        <Button type="submit" className="mt-2" disabled={isSubmitting}>
-          {isSubmitting && <Loader className="mr-2 animate-spin" />} 
-          {isUpdate ? "Update" : "Create"}
-        </Button>
-
+        </div>
       </form>
     </Form>
   );

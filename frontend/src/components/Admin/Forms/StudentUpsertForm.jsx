@@ -1,4 +1,5 @@
 import * as z from "zod";
+import axios from "axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -8,49 +9,99 @@ import { Input } from "../../ui/input.js";
 import { Button } from "../../ui/button.js";
 import { Loader } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../../ui/radio-group.js";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "../../ui/select.js";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import parentApi from "../../../services/Api/Admin/ParentApi.js";
+import UserApi from "../../../services/Api/UserApi.js";
 
-// 🧠 Define student form schema
+// Blood types for the select
+const BLOOD_TYPES = ['O-', 'O+', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+
 const formSchema = z.object({
-  firstname: z.string().max(50),
-  lastname: z.string().max(50),
+  firstname: z.string().min(2).max(50),
+  lastname: z.string().min(2).max(50),
   date_of_birth: z.string(),
   gender: z.enum(["m", "f"]),
   blood_type: z.string(),
   student_parent_id: z.string().min(1, "Please select a parent."),
-  email: z.string().email().min(2).max(30),
-  password: z.string().min(8).max(30)
+  degree_id: z.string().min(1, "Please select a degree."),
+  address: z.string().min(3, "Address is required"),
+  phone: z.string().min(3, "Phone is required"),
+  email: z.string().email().min(2).max(50),
+  password: z.string().min(8).max(30).optional(),
 });
 
-export default function StudentUpsertForm({ handleSubmit, values }) {
-  const isUpdate = Boolean(values);
+export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
+  const isUpdate = Boolean(values && values.id);
   const [parents, setParents] = useState([]);
+  const [degrees, setDegrees] = useState([]);
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: values || {}
-  });
-
-  const { setError, formState: { isSubmitting }, reset } = form;
-
+  // Fetch parents for the select dropdown
   useEffect(() => {
-    parentApi.all(['id', 'firstname', 'lastname'])
-      .then(({ data }) => setParents(data.data || []));
+    UserApi.parents()
+      .then(resp => setParents(resp.data.data || []))
+      .catch(() => setParents([]));
   }, []);
 
-  const onSubmit = async (formData) => {
-    const loader = toast.loading(isUpdate ? "Updating student..." : "Adding student...");
+  // Fetch degrees for the select dropdown
+  useEffect(() => {
+    axios.get("/api/admin/degrees", { withCredentials: true })
+      .then(res => setDegrees(res.data.data || []))
+      .catch(() => setDegrees([]));
+  }, []);
 
+  // Reset form if switching between add/edit
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      firstname: values?.firstname || "",
+      lastname: values?.lastname || "",
+      date_of_birth: values?.date_of_birth || "",
+      gender: values?.gender || "m",
+      blood_type: values?.blood_type || BLOOD_TYPES[0],
+      student_parent_id: values?.student_parent_id?.toString() || "",
+      degree_id: values?.degree_id?.toString() || "",
+      address: values?.address || "",
+      phone: values?.phone || "",
+      email: values?.email || "",
+      password: "",
+      id: values?.id || undefined,
+    },
+  });
+
+  useEffect(() => {
+    form.reset({
+      firstname: values?.firstname || "",
+      lastname: values?.lastname || "",
+      date_of_birth: values?.date_of_birth || "",
+      gender: values?.gender || "m",
+      blood_type: values?.blood_type || BLOOD_TYPES[0],
+      student_parent_id: values?.student_parent_id?.toString() || "",
+      degree_id: values?.degree_id?.toString() || "",
+      address: values?.address || "",
+      phone: values?.phone || "",
+      email: values?.email || "",
+      password: "",
+      id: values?.id || undefined,
+    });
+  }, [values]);
+
+  const { setError, formState: { isSubmitting } } = form;
+
+  const onSubmit = async (formData) => {
+    const loader = toast.loading(isUpdate ? "Updating student..." : "Creating student...");
     try {
+      if (isUpdate && !formData.password) {
+        delete formData.password;
+      }
+      if (isUpdate) {
+        formData.id = values.id;
+      }
       const { status, data } = await handleSubmit(formData);
-      if (status === 200) {
-        toast.success(data.message);
-        if (!isUpdate) reset(); // Reset only if it's a create
+      if (status === 200 || status === 201) {
+        toast.success(data.message || "Saved!");
+        form.reset();
+        if (onCancel) onCancel();
       }
     } catch (error) {
       const responseErrors = error?.response?.data?.errors;
@@ -69,7 +120,6 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-
         <FormField
           control={form.control}
           name="firstname"
@@ -81,7 +131,6 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="lastname"
@@ -93,7 +142,6 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="date_of_birth"
@@ -105,7 +153,6 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="gender"
@@ -113,11 +160,7 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             <FormItem>
               <FormLabel>Gender</FormLabel>
               <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex gap-4"
-                >
+                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
                   <RadioGroupItem value="m" /> Male
                   <RadioGroupItem value="f" /> Female
                 </RadioGroup>
@@ -126,19 +169,18 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="blood_type"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Blood Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger><SelectValue placeholder="Select Blood Type" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {["O-", "O+", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt, i) => (
+                  {BLOOD_TYPES.map((bt, i) => (
                     <SelectItem key={i} value={bt}>{bt}</SelectItem>
                   ))}
                 </SelectContent>
@@ -147,29 +189,51 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
+        <FormField
+          control={form.control}
+          name="degree_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Degree</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Degree" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {degrees.length
+                    ? degrees.map(degree => (
+                        <SelectItem key={degree.id} value={degree.id.toString()}>
+                          {degree.name}
+                        </SelectItem>
+                      ))
+                    : (
+                      <div className="px-3 py-2 text-sm text-gray-400">No degrees found</div>
+                    )}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="student_parent_id"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Parent</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger><SelectValue placeholder="Select Parent" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {parents.length ? (
-                    parents.map((parent) => (
-                      <SelectItem
-                        key={parent.id}
-                        value={parent.id.toString()}
-                      >
-                        {parent.firstname} {parent.lastname}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="" disabled>No parents found</SelectItem>
+                  {parents.length ? parents.map((parent) => (
+                    <SelectItem key={parent.id} value={parent.id.toString()}>
+                      {parent.firstname} {parent.lastname}
+                    </SelectItem>
+                  )) : (
+                    <SelectItem value="none" disabled>No parents found</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -177,7 +241,28 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Address</FormLabel>
+              <FormControl><Input {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone</FormLabel>
+              <FormControl><Input {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="email"
@@ -189,24 +274,44 @@ export default function StudentUpsertForm({ handleSubmit, values }) {
             </FormItem>
           )}
         />
-
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl><Input type="password" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
+        {/* Only required on create; optional on update */}
+        {!isUpdate && (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl><Input type="password" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        {isUpdate && (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New Password (optional)</FormLabel>
+                <FormControl><Input type="password" {...field} placeholder="Leave blank to keep current password" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <div className="flex gap-2">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader className="mr-2 animate-spin" />}
+            {isUpdate ? "Update" : "Create"}
+          </Button>
+          {isUpdate && onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
           )}
-        />
-
-        <Button type="submit" disabled={isSubmitting} className="mt-2">
-          {isSubmitting && <Loader className="mr-2 animate-spin" />}
-          {isUpdate ? "Update" : "Create"}
-        </Button>
-
+        </div>
       </form>
     </Form>
   );

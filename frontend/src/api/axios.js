@@ -1,23 +1,32 @@
+// src/api/axios.js
 import axios from 'axios';
 
 const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
-axios.defaults.baseURL = BASE;
-axios.defaults.withCredentials = true;
-axios.defaults.headers.common.Accept = 'application/json';
+// Instance pour tout le backend (sans /api)
+export const axiosBase = axios.create({
+  baseURL: BASE,
+  withCredentials: true,
+  headers: { Accept: 'application/json' },
+});
 
+// Instance pour l'API (préfixe /api)
 export const axiosClient = axios.create({
   baseURL: `${BASE}/api`,
-    withCredentials: true,            // ensure cookies are sent on API calls
-  headers: {
-    Accept: 'application/json',     // tell Laravel to return JSON 401s
-  },
-
-  
+  withCredentials: true,
+  headers: { Accept: 'application/json' },
 });
 
-axiosClient.interceptors.request.use(cfg => {
-  const t = localStorage.getItem('token');
-  if (t) cfg.headers.Authorization = `Bearer ${t}`;
-  return cfg;
-});
+// Ajoute le header XSRF-TOKEN sur les deux instances
+const setXsrfHeader = (instance) => {
+  instance.interceptors.request.use((config) => {
+    const matches = document.cookie.match(new RegExp('(^| )XSRF-TOKEN=([^;]+)'));
+    if (matches) {
+      config.headers['X-XSRF-TOKEN'] = decodeURIComponent(matches[2]);
+    }
+    return config;
+  });
+};
+
+setXsrfHeader(axiosBase);
+setXsrfHeader(axiosClient);

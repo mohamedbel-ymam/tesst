@@ -3,17 +3,15 @@ import { Button } from "../../components/ui/button.jsx";
 import { ScrollArea } from "../../components/ui/scroll-area.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext.jsx';
-import UserApi from "../../services/Api/UserApi.js";
 
 export function StudentAdministrationSideBar({ className }) {
   const navigate = useNavigate();
-  const { logout: contextLogout } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await UserApi.logout();
-      contextLogout();
-      navigate("/login");
+      await logout();
+      navigate("/login", { replace: true });
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -49,7 +47,7 @@ export function StudentAdministrationSideBar({ className }) {
               <Link to={item.path}>{item.label}</Link>
             </Button>
           ))}
-          {/* Logout button (handled manually) */}
+          {/* Logout button (handled via context) */}
           <Button
             variant="ghost"
             className="w-full justify-start text-left text-red-600 hover:bg-red-500 hover:text-white dark:bg-red-600 dark:text-white"

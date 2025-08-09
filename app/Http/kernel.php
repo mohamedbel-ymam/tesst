@@ -28,14 +28,15 @@ protected $middlewareGroups = [
         SubstituteBindings::class,
     ],
 
+ 
     'api' => [
-        // ← this middleware makes /api/* honor your session cookie & CSRF token
-        EnsureFrontendRequestsAreStateful::class,
-
-        // throttling and route-model bindings as usual
+        \Illuminate\Http\Middleware\HandleCors::class, // ← le CORS natif ici
+        \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         'throttle:api',
-        SubstituteBindings::class,
+        \Illuminate\Routing\Middleware\SubstituteBindings::class,
     ],
+
+
 
     'lock.degree' => EnsureStudentHasCorrectDegree::class,
 ];

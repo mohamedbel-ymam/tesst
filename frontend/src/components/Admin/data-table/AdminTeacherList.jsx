@@ -1,26 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import {DataTable} from '../data-table/DataTable';      // adjust path as needed
-import TeacherApi from '../../../services/Api/Admin/TeacherApi'; // adjust path as needed
-import { teacherColumns } from '../../../config/columns';    // <-- use teacherColumns
+import { DataTable } from '../data-table/DataTable';
+import UserApi from '../../../services/Api/UserApi';
+import { teacherColumns } from '../../../config/columns';
 
-export default function AdminTeacherList() {
-  const [data, setData] = useState([]);       // initialize as empty array
+export default function AdminTeacherList({ onEdit }) {
+  const [data, setData] = useState([]); // always start as array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this teacher?")) {
+      try {
+        await UserApi.delete(id);
+        setData(prev => prev.filter(t => t.id !== id));
+      } catch (err) {
+        alert("Error deleting teacher: " + (err.response?.data?.message || err.message));
+      }
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
-    TeacherApi.all()
+    UserApi.teachers()
       .then(response => {
-        setData(response.data.data);          // adjust if your payload shape differs
+        const list = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data.data)
+            ? response.data.data
+            : [];
+        setData(list);
       })
       .catch(err => {
         console.error(err);
         setError(err);
       })
-      .finally(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -41,7 +55,7 @@ export default function AdminTeacherList() {
 
   return (
     <div className="p-4">
-      <DataTable columns={teacherColumns} data={data} />
+      <DataTable columns={teacherColumns(onEdit, handleDelete)} data={data} />
     </div>
   );
 }

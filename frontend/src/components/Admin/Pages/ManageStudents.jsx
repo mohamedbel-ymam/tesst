@@ -1,66 +1,96 @@
-import { useAuth } from '../../../context/AuthContext.jsx';
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "../../ui/tabs.jsx";
-import {Separator} from "../../ui/separator.jsx";
-import {ScrollArea, ScrollBar} from "../../ui/scroll-area.jsx";
-
-import StudentsList from "../data-table/AdminStudentsList.jsx";
+import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs.jsx";
+import { Separator } from "../../ui/separator.jsx";
 import StudentUpsertForm from "../Forms/StudentUpsertForm.jsx";
-import studentApi from "../../../services/Api/Admin/StudentApi.js";
+import AdminStudentsList from "../data-table/AdminStudentsList.jsx";
+import UserApi from "../../../services/Api/UserApi.js";
 
 export default function ManageStudents() {
-  const {user} = useAuth()
-  return <>
-    <div className="relative overflow-x-auto">
-      <div className="hidden md:block">
-        <div className="">
-          <div className="bg-background">
-            <div className="grid">
-              <div className="col-span-3 lg:col-span-4">
-                <div className="h-full px-4 py-6 lg:px-8">
-                  <Tabs defaultValue="items_list" className="h-full space-y-6">
-                    <div className="space-between flex items-center">
-                      <TabsList>
-                        <TabsTrigger value="items_list" className="relative">
-                          Students
-                        </TabsTrigger>
-                        <TabsTrigger value="add_item">Add new student</TabsTrigger>
-                      </TabsList>
-                    </div>
-                    <TabsContent
-                      value="items_list"
-                      className="border-none p-0 outline-none"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1 w-full">
-                          <h2 className="text-2xl font-semibold tracking-tight">
-                            All students
-                          </h2>
-                          <StudentsList/>
-                        </div>
-                      </div>
-                      <Separator className="my-4"/>
-                      <div className="relative">
-                        <ScrollArea>
-                          <div className="flex space-x-4 pb-4">
-                          </div>
-                          <ScrollBar orientation="horizontal"/>
-                        </ScrollArea>
-                      </div>
-                    </TabsContent>
-                    <TabsContent
-                      value="add_item">
-                      <div className="space-y-1">
-                        <StudentUpsertForm handleSubmit={(values) => studentApi.create(values)}/>
-                      </div>
-                      <Separator className="my-4"/>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              </div>
-            </div>
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [tab, setTab] = useState("students_list");
+
+  const loadStudents = async () => {
+    setLoading(true);
+    try {
+      // Use UserApi.students() to fetch all students
+      const resp = await UserApi.students();
+      const list = Array.isArray(resp.data)
+        ? resp.data
+        : Array.isArray(resp.data.data)
+        ? resp.data.data
+        : [];
+      setStudents(list);
+    } catch (e) {
+      console.error("Error loading students:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  const handleSaveStudent = async (values) => {
+    if (editingStudent) {
+      
+      await UserApi.update(values.id, { ...values, role: "student" });
+    } else {
+      await UserApi.create({ ...values, role: "student" });
+    }
+    await loadStudents();
+    setEditingStudent(null);
+    setTab("students_list");
+  };
+
+  const handleEditStudent = (student) => {
+    setEditingStudent(student);
+    setTab("add_student");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStudent(null);
+    setTab("students_list");
+  };
+
+  return (
+    <div className="space-y-6">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="students_list">All Students</TabsTrigger>
+          <TabsTrigger value="add_student">
+            {editingStudent ? "Edit Student" : "Add Student"}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="students_list">
+          {loading ? (
+            <p>Loading students…</p>
+          ) : (
+            <AdminStudentsList data={students} onEdit={handleEditStudent} />
+          )}
+        </TabsContent>
+        <Separator />
+        <TabsContent value="add_student">
+          <div className="max-w-md">
+            <StudentUpsertForm
+              handleSubmit={handleSaveStudent}
+              values={editingStudent}
+              onCancel={handleCancelEdit}
+            />
+            {editingStudent && (
+              <button
+                className="mt-2 text-blue-500 underline"
+                onClick={handleCancelEdit}
+                type="button"
+              >
+                Cancel edit
+              </button>
+            )}
           </div>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
-  </>
+  );
 }

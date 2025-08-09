@@ -1,6 +1,5 @@
 // src/layouts/StudentDashboardLayout.jsx
-import { Link, Outlet, useNavigate } from "react-router-dom"
-import { useEffect } from "react"
+import { Link, Outlet, Navigate } from "react-router-dom"
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   LOGIN_ROUTE,
@@ -14,21 +13,17 @@ import { ModeToggle } from "../components/mode-toggle.jsx"
 import { GaugeIcon } from "lucide-react"
 
 export default function StudentDashboardLayout() {
-  const navigate = useNavigate()
-  const { user, authenticated, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
 
-  // redirect to login if not authenticated
-  useEffect(() => {
-    if (!authenticated) {
-      navigate(LOGIN_ROUTE, { replace: true })
-    }
-  }, [authenticated, navigate])
+  // 1. Tant que la vérif auth n'est pas finie, ne rend rien ou affiche un loader
+  if (loading) return <div>Chargement…</div>
 
-  // avoid rendering until we've confirmed auth
-  if (!authenticated) {
-    return null
+  // 2. Si pas loggé ou mauvais rôle, redirige proprement (évite les useEffect/navigate)
+  if (!user || user.role !== "student") {
+    return <Navigate to={LOGIN_ROUTE} replace />
   }
 
+  // 3. Sinon, on affiche tout le layout normalement
   return (
     <>
       <header className="flex items-center justify-between bg-opacity-90 px-12 py-4 mb-4">
@@ -38,7 +33,7 @@ export default function StudentDashboardLayout() {
         <ul className="flex items-center text-white">
           <li className="ml-5 px-2 py-1">
             <Link
-              to={STUDENT_DASHBOARD_ROUTE}
+              to={STUDENT_DASHBOARD_ROUTE.replace(":degree", "default")} // ← adapt here if you want a default degree or use a dynamic param
               className="flex items-center"
             >
               <GaugeIcon className="mr-1" /> Dashboard

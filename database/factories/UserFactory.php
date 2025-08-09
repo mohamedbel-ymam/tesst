@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Enums\UserRole;
+use App\Models\Degree;
 
 
 /**
@@ -36,8 +37,7 @@ public function definition(): array
         'email' => fake()->unique()->safeEmail(),
         'password' => static::$password ??= Hash::make('password'),
         'role' => UserRole::STUDENT->value,
-        'degree_id' => null, // You can change this if you want to assign a degree
-        'email_verified_at' => now(),
+        'degree_id' => Degree::inRandomOrder()->value('id'),        'email_verified_at' => now(),
         'remember_token' => Str::random(10),
     ];
 }
