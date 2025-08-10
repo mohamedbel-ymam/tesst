@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Button } from "../../components/ui/button.jsx";
 import { ScrollArea } from "../../components/ui/scroll-area.jsx";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext.jsx';
 
 export function StudentAdministrationSideBar({ className }) {
@@ -44,7 +44,14 @@ export function StudentAdministrationSideBar({ className }) {
               className="w-full justify-start text-left"
               asChild
             >
-              <Link to={item.path}>{item.label}</Link>
+              <NavLink
+  to={item.path}
+  className={({ isActive }) =>
+    `w-full text-left ${isActive ? "bg-blue-50 font-semibold" : ""}`
+  }
+>
+  {item.label}
+</NavLink>
             </Button>
           ))}
           {/* Logout button (handled via context) */}

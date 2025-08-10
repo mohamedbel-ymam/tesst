@@ -27,6 +27,13 @@ const setXsrfHeader = (instance) => {
     return config;
   });
 };
+let csrfFetched = false;
+export async function ensureCsrf() {
+  if (!csrfFetched) {
+    await axiosBase.get("/sanctum/csrf-cookie");
+    csrfFetched = true;
+  }
+}
 
 setXsrfHeader(axiosBase);
 setXsrfHeader(axiosClient);

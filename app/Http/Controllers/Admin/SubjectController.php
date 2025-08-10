@@ -14,11 +14,12 @@ class SubjectController extends Controller
     public function index()
     {
         // Eager‐load any relations if needed, e.g. ->with('teachers')
-        $subjects = Subject::all();
-
-        return response()->json([
-            'data' => $subjects,
-        ]);
+      {
+    $subjects = Subject::query()
+        ->orderBy('name')
+        ->paginate(request('per_page', 1000));
+    return response()->json(['data' => $subjects->items()]);
+}
     }
 
     /**

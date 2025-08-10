@@ -1,5 +1,5 @@
 import * as z from "zod";
-import axios from "axios";
+import { axiosClient } from "../../../api/axios.js";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import UserApi from "../../../services/Api/UserApi.js";
 
-// Blood types for the select
 const BLOOD_TYPES = ['O-', 'O+', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
 const formSchema = z.object({
@@ -32,25 +31,35 @@ const formSchema = z.object({
 });
 
 export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
-  const isUpdate = Boolean(values && values.id);
+  const isUpdate = Boolean(values?.id);
+
   const [parents, setParents] = useState([]);
   const [degrees, setDegrees] = useState([]);
+  const [parentsLoading, setParentsLoading] = useState(true);
+  const [degreesLoading, setDegreesLoading] = useState(true);
 
-  // Fetch parents for the select dropdown
+  // Parents
   useEffect(() => {
+    setParentsLoading(true);
     UserApi.parents()
-      .then(resp => setParents(resp.data.data || []))
-      .catch(() => setParents([]));
+      .then((resp) => setParents(resp?.data?.data || []))
+      .catch(() => setParents([]))
+      .finally(() => setParentsLoading(false));
   }, []);
 
-  // Fetch degrees for the select dropdown
+  // Degrees
   useEffect(() => {
-    axios.get("/api/admin/degrees", { withCredentials: true })
-      .then(res => setDegrees(res.data.data || []))
-      .catch(() => setDegrees([]));
+    setDegreesLoading(true);
+    axiosClient
+      .get("/admin/degrees", { params: { per_page: 1000 } })
+      .then((res) => {
+        const payload = res.data?.data || res.data?.degrees || res.data || [];
+        setDegrees(Array.isArray(payload) ? payload : []);
+      })
+      .catch(() => setDegrees([]))
+      .finally(() => setDegreesLoading(false));
   }, []);
 
-  // Reset form if switching between add/edit
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -69,6 +78,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
     },
   });
 
+  // Keep form in sync when switching between add/edit
   useEffect(() => {
     form.reset({
       firstname: values?.firstname || "",
@@ -84,30 +94,32 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
       password: "",
       id: values?.id || undefined,
     });
-  }, [values]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values?.id]); // reset only when switching record
 
   const { setError, formState: { isSubmitting } } = form;
 
   const onSubmit = async (formData) => {
     const loader = toast.loading(isUpdate ? "Updating student..." : "Creating student...");
     try {
-      if (isUpdate && !formData.password) {
-        delete formData.password;
-      }
-      if (isUpdate) {
-        formData.id = values.id;
-      }
+      if (isUpdate && !formData.password) delete formData.password;
+      if (isUpdate) formData.id = values.id;
+
+      // Coerce IDs (Select returns strings)
+      formData.degree_id = parseInt(formData.degree_id, 10);
+      formData.student_parent_id = parseInt(formData.student_parent_id, 10);
+
       const { status, data } = await handleSubmit(formData);
       if (status === 200 || status === 201) {
-        toast.success(data.message || "Saved!");
+        toast.success(data?.message || "Saved!");
         form.reset();
-        if (onCancel) onCancel();
+        onCancel?.();
       }
     } catch (error) {
       const responseErrors = error?.response?.data?.errors;
       if (responseErrors) {
         Object.entries(responseErrors).forEach(([field, messages]) => {
-          setError(field, { message: messages.join(", ") });
+          setError(field, { message: (messages || []).join(", ") });
         });
       } else {
         toast.error("Unexpected error occurred.");
@@ -131,6 +143,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="lastname"
@@ -142,6 +155,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="date_of_birth"
@@ -153,6 +167,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="gender"
@@ -169,6 +184,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="blood_type"
@@ -177,11 +193,13 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
               <FormLabel>Blood Type</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select Blood Type" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Blood Type" />
+                  </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {BLOOD_TYPES.map((bt, i) => (
-                    <SelectItem key={i} value={bt}>{bt}</SelectItem>
+                  {BLOOD_TYPES.map((bt) => (
+                    <SelectItem key={bt} value={bt}>{bt}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -189,6 +207,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="degree_id"
@@ -198,25 +217,32 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Degree" />
+                    <SelectValue placeholder={degreesLoading ? "Loading degrees..." : "Select Degree"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {degrees.length
-                    ? degrees.map(degree => (
-                        <SelectItem key={degree.id} value={degree.id.toString()}>
-                          {degree.name}
-                        </SelectItem>
-                      ))
-                    : (
-                      <div className="px-3 py-2 text-sm text-gray-400">No degrees found</div>
-                    )}
+                  {degreesLoading && (
+                    <SelectItem value="loading" disabled>Loading…</SelectItem>
+                  )}
+                  {!degreesLoading && degrees.length === 0 && (
+                    <SelectItem value="none" disabled>No degrees found</SelectItem>
+                  )}
+                  {!degreesLoading && degrees.length > 0 && degrees.map((degree) => {
+                    const id = (degree.id ?? degree.value)?.toString();
+                    const label = degree.name ?? degree.title ?? `Degree #${degree.id}`;
+                    return (
+                      <SelectItem key={id} value={id}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="student_parent_id"
@@ -225,22 +251,29 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
               <FormLabel>Parent</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select Parent" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder={parentsLoading ? "Loading parents..." : "Select Parent"} />
+                  </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {parents.length ? parents.map((parent) => (
-                    <SelectItem key={parent.id} value={parent.id.toString()}>
-                      {parent.firstname} {parent.lastname}
-                    </SelectItem>
-                  )) : (
+                  {parentsLoading && (
+                    <SelectItem value="loading" disabled>Loading…</SelectItem>
+                  )}
+                  {!parentsLoading && parents.length === 0 && (
                     <SelectItem value="none" disabled>No parents found</SelectItem>
                   )}
+                  {!parentsLoading && parents.length > 0 && parents.map((p) => (
+                    <SelectItem key={p.id} value={p.id.toString()}>
+                      {p.firstname} {p.lastname}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="address"
@@ -252,6 +285,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="phone"
@@ -263,6 +297,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="email"
@@ -274,7 +309,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
-        {/* Only required on create; optional on update */}
+
         {!isUpdate && (
           <FormField
             control={form.control}
@@ -288,6 +323,7 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             )}
           />
         )}
+
         {isUpdate && (
           <FormField
             control={form.control}
@@ -295,12 +331,15 @@ export default function StudentUpsertForm({ handleSubmit, values, onCancel }) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>New Password (optional)</FormLabel>
-                <FormControl><Input type="password" {...field} placeholder="Leave blank to keep current password" /></FormControl>
+                <FormControl>
+                  <Input type="password" {...field} placeholder="Leave blank to keep current password" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         )}
+
         <div className="flex gap-2">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader className="mr-2 animate-spin" />}

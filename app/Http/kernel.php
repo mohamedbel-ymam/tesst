@@ -36,7 +36,7 @@ protected $middlewareGroups = [
         \Illuminate\Routing\Middleware\SubstituteBindings::class,
     ],
 
-
+    'role' => \App\Http\Middleware\EnsureRole::class,
 
     'lock.degree' => EnsureStudentHasCorrectDegree::class,
 ];

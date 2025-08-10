@@ -1,5 +1,6 @@
 import * as z from "zod";
-import axios from "axios";
+import SubjectApi from "../../../services/Api/Admin/SubjectApi.js";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -29,17 +30,20 @@ const formSchema = z.object({
 });
 
 export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
-  const isUpdate = Boolean(values && values.id);
-  const [subjects, setSubjects] = useState([]);
+  const isUpdate = Boolean(values?.id);
 
-  // Fetch subjects for the select dropdown
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
+
+  // Load subjects
   useEffect(() => {
-    axios.get("/api/admin/subjects", { withCredentials: true })
-      .then(res => setSubjects(res.data.data || []))
-      .catch(() => setSubjects([]));
+    setSubjectsLoading(true);
+    SubjectApi.list()
+      .then(res => setSubjects(res.data?.data || []))
+      .catch(() => setSubjects([]))
+      .finally(() => setSubjectsLoading(false));
   }, []);
 
-  // Reset form if switching between add/edit
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,6 +61,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
     },
   });
 
+  // Keep in sync when switching record
   useEffect(() => {
     form.reset({
       firstname: values?.firstname || "",
@@ -71,30 +76,31 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
       password: "",
       id: values?.id || undefined,
     });
-  }, [values]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values?.id]);
 
   const { setError, formState: { isSubmitting } } = form;
 
   const onSubmit = async (formData) => {
     const loader = toast.loading(isUpdate ? "Updating teacher..." : "Creating teacher...");
     try {
-      if (isUpdate && !formData.password) {
-        delete formData.password;
-      }
-      if (isUpdate) {
-        formData.id = values.id;
-      }
+      if (isUpdate && !formData.password) delete formData.password;
+      if (isUpdate) formData.id = values.id;
+
+      // Select returns strings → backend expects int
+      formData.subject_id = parseInt(formData.subject_id, 10);
+
       const { status, data } = await handleSubmit(formData);
       if (status === 200 || status === 201) {
-        toast.success(data.message || "Saved!");
+        toast.success(data?.message || "Saved!");
         form.reset();
-        if (onCancel) onCancel();
+        onCancel?.();
       }
     } catch (error) {
       const responseErrors = error?.response?.data?.errors;
       if (responseErrors) {
         Object.entries(responseErrors).forEach(([field, messages]) => {
-          setError(field, { message: messages.join(", ") });
+          setError(field, { message: (messages || []).join(", ") });
         });
       } else {
         toast.error("Unexpected error occurred.");
@@ -118,6 +124,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="lastname"
@@ -129,6 +136,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="date_of_birth"
@@ -140,6 +148,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="gender"
@@ -156,6 +165,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="blood_type"
@@ -164,11 +174,13 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
               <FormLabel>Blood Type</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger><SelectValue placeholder="Select Blood Type" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Blood Type" />
+                  </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {BLOOD_TYPES.map((bt, i) => (
-                    <SelectItem key={i} value={bt}>{bt}</SelectItem>
+                  {BLOOD_TYPES.map((bt) => (
+                    <SelectItem key={bt} value={bt}>{bt}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -176,6 +188,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="subject_id"
@@ -185,25 +198,32 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Subject" />
+                    <SelectValue placeholder={subjectsLoading ? "Loading subjects..." : "Select Subject"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {subjects.length
-                    ? subjects.map(subject => (
-                        <SelectItem key={subject.id} value={subject.id.toString()}>
-                          {subject.name}
-                        </SelectItem>
-                      ))
-                    : (
-                      <div className="px-3 py-2 text-sm text-gray-400">No subjects found</div>
-                    )}
+                  {subjectsLoading && (
+                    <SelectItem value="loading" disabled>Loading…</SelectItem>
+                  )}
+                  {!subjectsLoading && subjects.length === 0 && (
+                    <SelectItem value="none" disabled>No subjects found</SelectItem>
+                  )}
+                  {!subjectsLoading && subjects.length > 0 && subjects.map((subject) => {
+                    const id = (subject.id ?? subject.value)?.toString();
+                    const label = subject.name ?? subject.title ?? `Subject #${subject.id}`;
+                    return (
+                      <SelectItem key={id} value={id}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="address"
@@ -215,6 +235,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="phone"
@@ -226,6 +247,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="email"
@@ -237,6 +259,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             </FormItem>
           )}
         />
+
         {!isUpdate && (
           <FormField
             control={form.control}
@@ -250,6 +273,7 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             )}
           />
         )}
+
         {isUpdate && (
           <FormField
             control={form.control}
@@ -257,12 +281,15 @@ export default function TeacherUpsertForm({ handleSubmit, values, onCancel }) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>New Password (optional)</FormLabel>
-                <FormControl><Input type="password" {...field} placeholder="Leave blank to keep current password" /></FormControl>
+                <FormControl>
+                  <Input type="password" {...field} placeholder="Leave blank to keep current password" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         )}
+
         <div className="flex gap-2">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader className="mr-2 animate-spin" />}
