@@ -1,31 +1,44 @@
 <?php
 
+// app/Http/Controllers/Admin/TimetableController.php
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Timetable;
 use Illuminate\Http\Request;
+use Throwable;
 
 class TimetableController extends Controller
 {
     public function index(Request $r)
     {
-        $perPage = (int) $r->integer('per_page', 15);
+        try {
+            $perPage = (int) $r->input('per_page', 15);
 
-        $page = Timetable::query()
-            ->with('degree:id,name')
-            ->when($r->filled('degree_id'), fn($q) => $q->where('degree_id', $r->degree_id))
-            ->orderByDesc('id')
-            ->paginate($perPage);
+            $q = Timetable::query()->with('degree:id,name');
 
-        return response()->json([
-            'data' => $page->items(),
-            'meta' => [
-                'current_page' => $page->currentPage(),
-                'last_page'    => $page->lastPage(),
-                'per_page'     => $page->perPage(),
-                'total'        => $page->total(),
-            ],
-        ]);
+            if ($r->filled('degree_id')) {
+                $q->where('degree_id', $r->input('degree_id'));
+            }
+
+            $page = $q->orderByDesc('id')->paginate($perPage);
+
+            // With zero rows, this still returns 200 and [].
+            return response()->json([
+                'data' => $page->items(),
+                'meta' => [
+                    'current_page' => $page->currentPage(),
+                    'last_page'    => $page->lastPage(),
+                    'per_page'     => $page->perPage(),
+                    'total'        => $page->total(),
+                ],
+            ], 200);
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json([
+                'message' => 'Timetables index failed',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 }
