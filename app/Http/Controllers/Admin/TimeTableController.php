@@ -1,12 +1,10 @@
 <?php
-
 // app/Http/Controllers/Admin/TimetableController.php
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Timetable;
 use Illuminate\Http\Request;
-use Throwable;
 
 class TimetableController extends Controller
 {
@@ -23,7 +21,6 @@ class TimetableController extends Controller
 
             $page = $q->orderByDesc('id')->paginate($perPage);
 
-            // With zero rows, this still returns 200 and [].
             return response()->json([
                 'data' => $page->items(),
                 'meta' => [
@@ -33,7 +30,7 @@ class TimetableController extends Controller
                     'total'        => $page->total(),
                 ],
             ], 200);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {       // note the leading backslash
             report($e);
             return response()->json([
                 'message' => 'Timetables index failed',

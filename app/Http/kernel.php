@@ -39,8 +39,9 @@ protected $middlewareGroups = [
 
 ];
     protected $middlewareAliases = [
+        // … your other aliases
         'role'        => \App\Http\Middleware\EnsureRole::class,
-        'lock.degree' => \App\Http\Middleware\EnsureStudentHasCorrectDegree::class,
+        'lock.degree' => \App\Http\Middleware\EnsureStudentHasCorrectDegree::class, // if you use it
     ];
 
 }

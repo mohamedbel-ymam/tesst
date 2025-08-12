@@ -14,13 +14,12 @@ class EnsureRole
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $role  = strtolower((string) $user->role);
-        $roles = array_map('strtolower', $roles);
+        $userRole = strtolower((string) $user->role);
+        $roles    = array_map('strtolower', $roles);
 
-        if (!in_array($role, $roles, true)) {
+        if (!in_array($userRole, $roles, true)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
-
         return $next($request);
     }
 }
