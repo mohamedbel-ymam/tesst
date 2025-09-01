@@ -51,7 +51,9 @@ class Kernel extends HttpKernel
         'verified'      => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
 
         // Your custom ones:
-        'role'         => \App\Http\Middleware\EnsureRole::class,
+        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'lock.degree'  => \App\Http\Middleware\EnsureStudentHasCorrectDegree::class, // if you use it
     ];
 }

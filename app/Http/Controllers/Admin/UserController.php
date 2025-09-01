@@ -5,34 +5,52 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
     public function index(Request $r)
-{
-    $perPage = (int) $r->integer('per_page', 15);
+    {
+        $perPage = (int) $r->integer('per_page', 15);
 
-    $users = User::query()
-        ->when($r->filled('role'), fn ($q) => $q->where('role', $r->role))
-        ->with([
-            'subject:id,name',
-            'degree:id,name',
-            'parentUser:id,firstname,lastname',
-        ])
-        ->orderByDesc('id')
-        ->paginate($perPage);
+        $query = User::query()
+            ->with([
+                'subject:id,name',
+                'degree:id,name',
+                'parentUser:id,firstname,lastname',
+            ])
+            ->select(['id','firstname','lastname','email',
+                      'degree_id','subject_id','student_parent_id',
+                      'created_at','updated_at']); // only real columns!
 
-    return response()->json([
-        'data' => $users->items(),  // only the current page items
-        'meta' => [
-            'current_page' => $users->currentPage(),
-            'last_page'    => $users->lastPage(),
-            'per_page'     => $users->perPage(),
-            'total'        => $users->total(),
-        ],
-    ]);
-}
+        // Filter by Spatie role if provided: ?role=teacher
+        if ($r->filled('role')) {
+            $query->role($r->string('role'));   // <-- Spatie scope
+        }
+
+        // Optional search: ?q=smith
+        if ($r->filled('q')) {
+            $q = $r->string('q');
+            $query->where(function ($sub) use ($q) {
+                $sub->where('firstname', 'like', "%{$q}%")
+                    ->orWhere('lastname', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%");
+            });
+        }
+
+        $query->orderByDesc('id');
+
+        $page = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $page->items(),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
+            ],
+        ]);
+    }
 
     public function store(Request $r)
 {

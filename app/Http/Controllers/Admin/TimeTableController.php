@@ -12,10 +12,16 @@ class TimetableController extends Controller
     {
         $perPage = (int) $r->input('per_page', 15);
 
-        $page = Timetable::query()
-            ->with('degree:id,name')
-            ->orderByDesc('id')
-            ->paginate($perPage);
+        $query = Timetable::query()
+            ->with(['degree:id,name'])
+            ->select(['id','name','degree_id','created_at','updated_at'])
+            ->orderByDesc('id');
+
+        if ($r->filled('degree_id')) {
+            $query->where('degree_id', (int) $r->input('degree_id'));
+        }
+
+        $page = $query->paginate($perPage);
 
         return response()->json([
             'data' => $page->items(),
