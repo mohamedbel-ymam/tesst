@@ -7,35 +7,63 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Traits\HasRoles;
+use App\Enums\UserRole; // <-- keep if you’re using the enum cast below
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
-     * Use the same guard you authenticate with.
-     * (Sanctum session auth uses the "web" guard.)
+     * Spatie\Permission guard to use with this model.
+     * (Sanctum session auth also uses the "web" guard.)
      */
-    protected string $guard_name = 'web';
+    protected $guard_name = 'web';
 
-    /** -------------------- Relations -------------------- */
+    /* ----------------------------------------------------------------------
+     | Relationships
+     |-----------------------------------------------------------------------*/
+
+    /** Student/Teacher may belong to a degree */
     public function degree()
     {
         return $this->belongsTo(Degree::class);
     }
 
+    /** Teacher may belong to a main subject (optional) */
     public function subject()
     {
         return $this->belongsTo(Subject::class);
     }
 
-    // For students: the linked parent user
-    public function parentUser()
+    /**
+     * For students: their parent user (FK: student_parent_id).
+     * Use either `parent()` or `parentUser()`—they point to the same relation.
+     */
+    public function parent()
     {
         return $this->belongsTo(User::class, 'student_parent_id');
     }
 
-    /** -------------------- Mass assignment -------------------- */
+    /** Backwards-compatible alias */
+    public function parentUser()
+    {
+        return $this->parent();
+    }
+
+    /**
+     * For parents: the children users (students) that reference them.
+     * This is a HasMany, so in seeders/controllers use `$parent->children()->save($student)`
+     * or `$student->parent()->associate($parent)->save()` (NOT syncWithoutDetaching).
+     */
+    public function children()
+    {
+        return $this->hasMany(User::class, 'student_parent_id');
+    }
+
+    /* ----------------------------------------------------------------------
+     | Mass assignment / Hidden / Casts
+     |-----------------------------------------------------------------------*/
+
     protected $fillable = [
         'firstname',
         'lastname',
@@ -46,13 +74,11 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
-        // NOTE: do NOT rely on a 'role' column with Spatie.
-        // If you still have it in your DB for legacy display, you may keep it,
-        // but filtering/authorization must use Spatie roles.
-        // 'role',
-        'degree_id',          // students
-        'subject_id',         // teachers
-        'student_parent_id',  // students -> parent
+        'role',            // string or enum-backed value
+        'degree_id',       // students
+        'subject_id',      // teachers (optional)
+        'student_parent_id', // students → parent
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -62,7 +88,23 @@ class User extends Authenticatable
 
     protected $casts  = [
         'email_verified_at' => 'datetime',
-        // Laravel 10+ will hash automatically when setting $user->password = 'plain';
         'password'          => 'hashed',
+        // If your `role` column stores a PHP 8.1 backed enum value:
+        // comment out if you're NOT using the enum.
+        'role'              => UserRole::class,
     ];
+
+    /* ----------------------------------------------------------------------
+     | Convenience helpers (optional)
+     |-----------------------------------------------------------------------*/
+
+    public function getFullNameAttribute(): string
+    {
+        return trim("{$this->firstname} {$this->lastname}");
+    }
+
+    public function isAdmin(): bool    { return (string)$this->role === (string)(UserRole::ADMIN->value ?? 'admin'); }
+    public function isTeacher(): bool  { return (string)$this->role === (string)(UserRole::TEACHER->value ?? 'teacher'); }
+    public function isStudent(): bool  { return (string)$this->role === (string)(UserRole::STUDENT->value ?? 'student'); }
+    public function isParent(): bool   { return (string)$this->role === (string)(UserRole::PARENT->value ?? 'parent'); }
 }

@@ -4,7 +4,7 @@ import { LOGIN_ROUTE, redirectToDashboard, STUDENT_DASHBOARD_ROUTE } from "../ro
 import { useAuth } from '../context/AuthContext.jsx';
 import { GaugeIcon } from "lucide-react";
 import { ModeToggle } from "../components/mode-toggle.jsx";
-import { AdminAdministrationSideBar } from "./Administration/AdminAdministrationSideBar.jsx";
+import { AdminAdministrationSideBar } from "./Administration/AdminAdministrationSidebar.jsx";
 import AdminDropDownMenu from "./drop-down-menu/AdminDropDownMenu.jsx";
 
 export default function AdminDashboardLayout() {
@@ -30,7 +30,7 @@ export default function AdminDashboardLayout() {
                   <GaugeIcon className={'mx-1'} />Dashboard
                 </Link>
               </li>
-              <li className="ml-5 px-2 py-1">
+              <li className="ml-5 px-2 py-1 text-black dark:text-white">
                 <AdminDropDownMenu />
               </li>
               <li className="ml-5 px-2 py-1">

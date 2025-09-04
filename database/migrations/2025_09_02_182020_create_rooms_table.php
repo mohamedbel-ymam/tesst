@@ -6,18 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
-        if (Schema::hasTable('subjects')) {
-            // Already there — do nothing to avoid "base table already exists"
-            return;
-        }
-        Schema::create('subjects', function (Blueprint $table) {
+        Schema::create('rooms', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('code')->nullable()->unique();
+            $table->unsignedInteger('capacity')->nullable();
             $table->timestamps();
         });
     }
     public function down(): void {
-        Schema::dropIfExists('subjects');
+        Schema::dropIfExists('rooms');
     }
 };

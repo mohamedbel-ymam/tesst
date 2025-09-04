@@ -36,24 +36,56 @@ class Kernel extends HttpKernel
     ];
 
     /**
-     * The application's route middleware aliases.
+     * Laravel 10/11 name
      */
     protected $middlewareAliases = [
-        // Laravel defaults (keep yours if you added more)
-        'auth'          => \Illuminate\Auth\Middleware\Authenticate::class,
-        'auth.basic'    => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-        'can'           => \Illuminate\Auth\Middleware\Authorize::class,
-        'guest'         => \App\Http\Middleware\RedirectIfAuthenticated::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'signed'        => \Illuminate\Routing\Middleware\ValidateSignature::class,
-        'throttle'      => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'verified'      => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        // Laravel defaults
+        'auth'              => \Illuminate\Auth\Middleware\Authenticate::class,
+        'auth.basic'        => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'cache.headers'     => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+        'can'               => \Illuminate\Auth\Middleware\Authorize::class,
+        'guest'             => \App\Http\Middleware\RedirectIfAuthenticated::class,
+        'password.confirm'  => \Illuminate\Auth\Middleware\RequirePassword::class,
+        'signed'            => \Illuminate\Routing\Middleware\ValidateSignature::class,
+        'throttle'          => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'verified'          => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
 
-        // Your custom ones:
+        // Spatie
         'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-        'lock.degree'  => \App\Http\Middleware\EnsureStudentHasCorrectDegree::class, // if you use it
+
+        // Your custom
+        'lock.degree' => \App\Http\Middleware\EnsureStudentHasCorrectDegree::class,
+    ];
+
+    /**
+     * Laravel 8/9 name (same aliases copied here)
+     */
+    protected $routeMiddleware = [
+        // Laravel defaults
+        'auth'              => \Illuminate\Auth\Middleware\Authenticate::class,
+        'auth.basic'        => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'cache.headers'     => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+        'can'               => \Illuminate\Auth\Middleware\Authorize::class,
+        'guest'             => \App\Http\Middleware\RedirectIfAuthenticated::class,
+        'password.confirm'  => \Illuminate\Auth\Middleware\RequirePassword::class,
+        'signed'            => \Illuminate\Routing\Middleware\ValidateSignature::class,
+        'throttle'          => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'verified'          => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+
+        // Spatie
+        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+    'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+    'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+
+        // Your custom
+        'lock.degree' => \App\Http\Middleware\EnsureStudentHasCorrectDegree::class,
     ];
 }
+
+        
+       
+
+
+

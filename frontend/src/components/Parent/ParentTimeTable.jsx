@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-// ⬇️ adjust the path if your api file lives elsewhere
 import TimetableApi from "../../services/Api/Admin/TimeTableApi";
+import { axiosClient } from "../../api/axios";
 
-const unwrapData = (r) => r?.data?.data ?? r?.data ?? null;
+const unwrapChildren = (r) => r?.data?.data ?? r?.data?.children ?? r?.data ?? [];
+const unwrapPayload  = (r) => r?.data?.data ?? r?.data ?? null;
+
 const getStart = (l) => l.start_time ?? l.starts_at ?? null;
 const getEnd   = (l) => l.end_time   ?? l.ends_at   ?? null;
 
@@ -16,17 +18,37 @@ const DAYS = [
   { label: "Sun", val: 7 },
 ];
 
-export default function StudentTimetable() {
+export default function ParentTimetable() {
+  const [children, setChildren] = useState([]);
+  const [childId, setChildId]   = useState("");
   const [timetable, setTimetable] = useState(null);
   const [lessons, setLessons]     = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [loadingChild, setLoadingChild] = useState(false);
 
+  // 1) Load linked children
   useEffect(() => {
     (async () => {
       try {
-        const res = await TimetableApi.student();
-        const payload = unwrapData(res);
-        // backend may return {timetable, lessons} or just {lessons} or array
+        // adjust if your endpoint differs (e.g. "/parent/students")
+        const res = await axiosClient.get("/parent/children", { params: { per_page: 200 } });
+        const kids = unwrapChildren(res);
+        setChildren(kids);
+        if (kids.length && !childId) setChildId(String(kids[0].id));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []); // eslint-disable-line
+
+  // 2) Load timetable for selected child
+  useEffect(() => {
+    if (!childId) return;
+    (async () => {
+      setLoadingChild(true);
+      try {
+        const res = await TimetableApi.parent({ child_id: childId });
+        const payload = unwrapPayload(res);
         if (Array.isArray(payload)) {
           setLessons(payload);
           setTimetable(payload[0]?.timetable ?? null);
@@ -35,20 +57,39 @@ export default function StudentTimetable() {
           setTimetable(payload?.timetable ?? null);
         }
       } finally {
-        setLoading(false);
+        setLoadingChild(false);
       }
     })();
-  }, []);
+  }, [childId]);
 
   if (loading) return <div className="p-4 text-center">Loading…</div>;
-  if (!timetable && !(lessons?.length)) return <div className="p-4 text-center">No timetable yet.</div>;
+  if (!children.length) return <div className="p-4 text-center">No linked students found.</div>;
 
   return (
-    <div className="p-4">
-      <div className="text-xl font-semibold mb-3">
-        {timetable?.title ?? "My Timetable"}
+    <div className="p-4 space-y-4">
+      {/* Child selector (simple HTML select to avoid deps/paths) */}
+      <div className="flex items-center gap-2">
+        <label className="text-sm font-medium">Select child:</label>
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={childId}
+          onChange={(e) => setChildId(e.target.value)}
+        >
+          {children.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {(c.firstname && c.lastname) ? `${c.firstname} ${c.lastname}` : (c.name ?? `#${c.id}`)}
+            </option>
+          ))}
+        </select>
+        {loadingChild && <span className="text-xs text-muted-foreground">Loading timetable…</span>}
       </div>
-      <WeekGrid lessons={lessons} />
+
+      <div>
+        <div className="text-xl font-semibold mb-3">
+          {timetable?.title ?? "Child Timetable"}
+        </div>
+        <WeekGrid lessons={lessons} />
+      </div>
     </div>
   );
 }
